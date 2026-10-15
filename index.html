@@ -28,6 +28,7 @@
   <span class="topbar-meta">FX3G · ST · 2026-2</span>
 </header>
 
+<div class="hero-bg" aria-hidden="true"><img src="assets/img/hero.webp" alt="" fetchpriority="high"></div>
 <main id="top">
   <section class="hero">
     <p class="eyebrow"><span class="dot"></span>Lenguajes Técnicos de Programación · EAFIT</p>
@@ -58,10 +59,20 @@
 
     <div class="tabs" role="tablist">
       <button class="tab is-active" role="tab" aria-selected="true" data-tab="grua">
-        <span class="tab-kr">크레인</span>Puente grúa<span class="badge ok">Opción presentada</span>
+        <img class="tab-img" src="assets/img/grua.webp" alt="" loading="lazy">
+        <span class="tab-body">
+          <span class="badge ok">Opción presentada</span>
+          <span class="tab-title"><span class="tab-kr">크레인</span>Puente grúa pequeño</span>
+          <span class="tab-sub">3 piezas · 3 puntos · electroimán · mínimo de movimientos</span>
+        </span>
       </button>
       <button class="tab" role="tab" aria-selected="false" data-tab="parq">
-        <span class="tab-kr">주차장</span>Parqueadero lineal<span class="badge warn">Banco dañado</span>
+        <img class="tab-img" src="assets/img/parq.webp" alt="" loading="lazy">
+        <span class="tab-body">
+          <span class="badge warn">Banco dañado</span>
+          <span class="tab-title"><span class="tab-kr">주차장</span>Parqueadero lineal</span>
+          <span class="tab-sub">4 pisos · 8 puestos · elevador central · alarma</span>
+        </span>
       </button>
     </div>
 
@@ -253,7 +264,7 @@ LADO = POS MOD 2</pre>
 
 <footer class="footer">
   <span>Reto 03 · MEF con PLC · Lenguajes Técnicos de Programación · Universidad EAFIT</span>
-  <span class="kr">제작 2026</span>
+  <span>Imágenes ilustrativas generadas con ChatGPT <span class="kr">제작 2026</span></span>
 </footer>
 
 <script type="module" src="js/app.js"></script>
