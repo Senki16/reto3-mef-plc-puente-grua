@@ -208,6 +208,26 @@ main { max-width: 1280px; margin: 0 auto; padding: 0 clamp(16px, 4vw, 48px); }
 
 .footnote { font: 400 11.5px var(--mono); color: var(--muted); margin: 12px 0 0; }
 
+/* ---------- pruebas ---------- */
+.lab { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 16px; margin-bottom: 16px; }
+.lab-photo { margin: 0; padding: 0; overflow: hidden; }
+.lab-photo img { width: 100%; height: 100%; max-height: 420px; object-fit: cover; display: block; }
+.lab-photo figcaption { font-size: 13px; color: var(--muted); padding: 10px 14px; border-top: 1px solid var(--line); }
+.checks { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; font-size: 14px; color: #c3cbe4; }
+.checks li { display: flex; gap: 12px; align-items: flex-start; }
+.checks i { flex: none; width: 18px; height: 18px; margin-top: 2px; border-radius: 50%; border: 1px solid var(--green); box-shadow: 0 0 10px rgba(53,242,161,.35); position: relative; }
+.checks i::after { content: ''; position: absolute; left: 5px; top: 2px; width: 5px; height: 9px; border: solid var(--green); border-width: 0 2px 2px 0; transform: rotate(45deg); }
+.checks b { color: var(--text); }
+.lab-checks .muted { color: var(--muted); font-size: 13px; margin: 18px 0 0; }
+.videos { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px; }
+.vcard { margin: 0; background: linear-gradient(180deg, var(--panel), var(--bg-2)); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; display: flex; flex-direction: column; transition: border-color .2s; }
+.vcard:hover { border-color: var(--line-2); }
+.vcard video { width: 100%; aspect-ratio: 478 / 850; object-fit: cover; display: block; background: #000; }
+.vcard figcaption { padding: 12px 12px 14px; display: flex; flex-direction: column; gap: 6px; align-items: flex-start; font-size: 13px; color: #aab3cf; line-height: 1.45; flex: 1; }
+.vcard figcaption b { font: 500 12px var(--mono); color: var(--cyan); letter-spacing: .04em; }
+.vcard .badge { margin-top: auto; }
+.vtag { font-weight: 900; text-transform: uppercase; color: var(--text); font-size: 15px; letter-spacing: .02em; }
+
 /* ---------- MEF ---------- */
 .mef-grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 16px; }
 .fig { margin: 0; padding: 12px; }
@@ -237,6 +257,8 @@ main { max-width: 1280px; margin: 0 auto; padding: 0 clamp(16px, 4vw, 48px); }
 
 /* ---------- responsive ---------- */
 @media (max-width: 1080px) {
+  .lab { grid-template-columns: 1fr; }
+  .videos { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .sim { grid-template-columns: 1fr; }
   .sim-bottom { grid-template-columns: 1fr 1fr; }
   .log-card { grid-column: 1 / -1; }
@@ -251,6 +273,7 @@ main { max-width: 1280px; margin: 0 auto; padding: 0 clamp(16px, 4vw, 48px); }
   .btn-row.three { grid-template-columns: 1fr 1fr 1fr; }
   .switch-row { grid-template-columns: 1fr; }
   .tabs { grid-template-columns: 1fr; }
+  .videos { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .tab { min-height: 150px; }
   .hero { min-height: 0; padding: 56px 0 36px; }
   .hero-bg { height: 560px; }

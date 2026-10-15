@@ -22,6 +22,7 @@
   </a>
   <nav class="nav">
     <a href="#sim">Simuladores</a>
+    <a href="#pruebas">Pruebas</a>
     <a href="#mef">MEF</a>
     <a href="#codigo">Código</a>
   </nav>
@@ -206,9 +207,55 @@
     </div>
   </section>
 
-  <section id="mef" class="section">
+  <section id="pruebas" class="section">
     <div class="section-head">
       <span class="section-idx">02</span>
+      <h2>Pruebas en el PLC <span class="kr">실험</span></h2>
+    </div>
+    <div class="lab">
+      <figure class="card lab-photo">
+        <img src="assets/img/montaje.webp" alt="Montaje de las pruebas: PC con GX Works2, PLC Mitsubishi FX3G y el puente grúa" loading="lazy">
+        <figcaption>Montaje en el laboratorio: PC con GX Works2 1.605F, PLC Mitsubishi FX3G y el puente grúa.</figcaption>
+      </figure>
+      <div class="card lab-checks">
+        <div class="card-head">Programa en el PLC real <span class="kr">검증</span></div>
+        <ul class="checks">
+          <li><i></i>Compilación (Rebuild All): <b>0 errores, 0 advertencias</b></li>
+          <li><i></i>Conexión USB con el FX3G y <b>Write to PLC</b> completo</li>
+          <li><i></i>Verificación PLC contra proyecto: <b>Match</b></li>
+          <li><i></i>Diagnóstico: PLC en <b>RUN sin errores</b></li>
+          <li><i></i><b>6 / 6 pruebas</b> del protocolo cumplen</li>
+        </ul>
+        <p class="muted">Abajo están los videos de cada prueba en el banco del puente grúa.</p>
+      </div>
+    </div>
+    <div class="videos">
+        <figure class="vcard">
+          <video controls preload="none" playsinline poster="assets/video/prueba1.jpg"><source src="assets/video/prueba1.mp4" type="video/mp4"></video>
+          <figcaption><span class="vtag">Prueba 1</span><b>SW1 = 0 · SW2 = 0</b><span>Pila ascendente en P1 → 3 movimientos a P2</span><span class="badge ok">Cumple</span></figcaption>
+        </figure>
+        <figure class="vcard">
+          <video controls preload="none" playsinline poster="assets/video/prueba2.jpg"><source src="assets/video/prueba2.mp4" type="video/mp4"></video>
+          <figcaption><span class="vtag">Prueba 2</span><b>SW1 = 0 · SW2 = 1</b><span>Pila ascendente en P3 → 3 movimientos a P2</span><span class="badge ok">Cumple</span></figcaption>
+        </figure>
+        <figure class="vcard">
+          <video controls preload="none" playsinline poster="assets/video/prueba3.jpg"><source src="assets/video/prueba3.mp4" type="video/mp4"></video>
+          <figcaption><span class="vtag">Prueba 3</span><b>SW1 = 1 · SW2 = 0</b><span>Pila descendente en P1 → 5 movimientos, P3 auxiliar</span><span class="badge ok">Cumple</span></figcaption>
+        </figure>
+        <figure class="vcard">
+          <video controls preload="none" playsinline poster="assets/video/prueba4.jpg"><source src="assets/video/prueba4.mp4" type="video/mp4"></video>
+          <figcaption><span class="vtag">Prueba 4</span><b>SW1 = 1 · SW2 = 1</b><span>Pila descendente en P3 → 5 movimientos, P1 auxiliar</span><span class="badge ok">Cumple</span></figcaption>
+        </figure>
+        <figure class="vcard">
+          <video controls preload="none" playsinline poster="assets/video/prueba56.jpg"><source src="assets/video/prueba56.mp4" type="video/mp4"></video>
+          <figcaption><span class="vtag">Pruebas 5 y 6</span><b>DETENER</b><span>Sin pieza se detiene de inmediato; con pieza la suelta en el destino y se detiene</span><span class="badge ok">Cumple</span></figcaption>
+        </figure>
+    </div>
+  </section>
+
+  <section id="mef" class="section">
+    <div class="section-head">
+      <span class="section-idx">03</span>
       <h2>Máquina de estados <span class="kr">상태 기계</span></h2>
     </div>
     <div class="mef-grid">
@@ -246,7 +293,7 @@ LADO = POS MOD 2</pre>
 
   <section id="codigo" class="section">
     <div class="section-head">
-      <span class="section-idx">03</span>
+      <span class="section-idx">04</span>
       <h2>Código ST <span class="kr">코드</span></h2>
     </div>
     <div class="card code-card">
