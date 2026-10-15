@@ -376,3 +376,23 @@ document.querySelectorAll('[data-clear]').forEach(b => b.addEventListener('click
 let initial = 'grua';
 try { initial = localStorage.getItem('reto3-tab') || 'grua'; } catch {}
 selectTab(initial === 'parq' ? 'parq' : 'grua');
+
+// ============================================================ galería GX Works2
+(() => {
+  const items = [...document.querySelectorAll('.gx-item')];
+  const dlg = $('#lightbox'); if (!dlg || !items.length) return;
+  let cur = 0;
+  const show = i => {
+    cur = (i + items.length) % items.length;
+    const it = items[cur];
+    $('#lb-img').src = it.dataset.full; $('#lb-img').alt = it.dataset.cap;
+    $('#lb-cap').textContent = it.dataset.cap;
+    $('#lb-n').textContent = `${cur + 1} / ${items.length}`;
+  };
+  items.forEach((it, i) => it.addEventListener('click', () => { show(i); dlg.showModal(); }));
+  $('#lb-prev').addEventListener('click', () => show(cur - 1));
+  $('#lb-next').addEventListener('click', () => show(cur + 1));
+  $('#lb-close').addEventListener('click', () => dlg.close());
+  dlg.addEventListener('click', e => { if (e.target === dlg) dlg.close(); });
+  dlg.addEventListener('keydown', e => { if (e.key === 'ArrowLeft') show(cur - 1); if (e.key === 'ArrowRight') show(cur + 1); });
+})();
