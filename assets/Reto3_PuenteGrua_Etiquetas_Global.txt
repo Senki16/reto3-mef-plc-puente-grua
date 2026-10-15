@@ -1,0 +1,31 @@
+VAR_GLOBAL	SEN_IZQ	Bit		X0		Sensor izquierda (punto 1)
+VAR_GLOBAL	SEN_CEN	Bit		X1		Sensor centro (punto 2)
+VAR_GLOBAL	SEN_DER	Bit		X2		Sensor derecha (punto 3)
+VAR_GLOBAL	SEN_ARRIBA	Bit		X3		Sensor arriba
+VAR_GLOBAL	SEN_ABAJO	Bit		X4		Sensor abajo
+VAR_GLOBAL	SW1	Bit		X20		SW1: 0 ascendente / 1 descendente
+VAR_GLOBAL	P_INICIO	Bit		X21		Pulsador inicio (NA)
+VAR_GLOBAL	DETENER	Bit		X22		Pulsador detener (NA)
+VAR_GLOBAL	SW2	Bit		X23		SW2: 0 piezas en P1 / 1 piezas en P3 (verificar)
+VAR_GLOBAL	BAJAR	Bit		Y0		Bajar
+VAR_GLOBAL	SUBIR	Bit		Y1		Subir
+VAR_GLOBAL	IMAN	Bit		Y2		Electroiman
+VAR_GLOBAL	MOV_IZQ	Bit		Y3		Mover izquierda
+VAR_GLOBAL	MOV_DER	Bit		Y4		Mover derecha
+VAR_GLOBAL	ESTADO	Word[Signed]				Estado actual de la MEF (0..10)
+VAR_GLOBAL	PASO	Word[Signed]				Movimiento actual de la secuencia (0..5)
+VAR_GLOBAL	N_MOV	Word[Signed]				Total de movimientos (3 o 5)
+VAR_GLOBAL	ORIGEN	Word[Signed]				Punto donde se recoge la pieza (1..3)
+VAR_GLOBAL	DESTINO	Word[Signed]				Punto donde se deja la pieza (1..3)
+VAR_GLOBAL	FUENTE	Word[Signed]				Punto inicial de las piezas (1 o 3)
+VAR_GLOBAL	AUX	Word[Signed]				Punto auxiliar (3 o 1)
+VAR_GLOBAL	OBJ	Word[Signed]				Punto objetivo del movimiento horizontal
+VAR_GLOBAL	POS_ACT	Word[Signed]				Ultimo punto detectado (1..3)
+VAR_GLOBAL	DIR	Word[Signed]				Direccion: -1 izq, 0 llego, 1 der
+VAR_GLOBAL	ULT_DIR	Word[Signed]				Ultima direccion de movimiento
+VAR_GLOBAL	CFG_DESC	Bit				SW1 leido al iniciar (descendente)
+VAR_GLOBAL	CFG_P3	Bit				SW2 leido al iniciar (piezas en P3)
+VAR_GLOBAL	PARAR	Bit				Detener pedido con pieza
+VAR_GLOBAL	EN_OBJ	Bit				Esta en el punto objetivo
+VAR_GLOBAL	F_INICIO	Bit				Flanco de subida de P_INICIO
+VAR_GLOBAL	INI_ANT	Bit				P_INICIO del ciclo anterior

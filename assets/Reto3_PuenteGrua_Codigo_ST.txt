@@ -1,0 +1,222 @@
+(* RETO #3 - MEF CON PLC - PUENTE GRUA PEQUENO
+   PLC Mitsubishi FX3G - GX Works2 (Structured Project) - POU en ST
+   Estados: 0 Reposo, 1 Subir, 2 Ir izq a origen, 3 Ir der a origen,
+   4 Bajar a recoger, 5 Energizar iman, 6 Subir con pieza,
+   7 Ir izq a destino, 8 Ir der a destino, 9 Bajar con pieza, 10 Soltar pieza
+   Puntos: 1 = P1 (izquierda), 2 = P2 (centro), 3 = P3 (derecha)
+   SW1 = 0 ascendente / 1 descendente,  SW2 = 0 piezas en P1 / 1 piezas en P3
+   (vistas desde arriba: ascendente = pequena arriba, grande abajo)
+   Resultado en P2: descendente (grande arriba, mediana, pequena abajo)
+   Minimo de movimientos: ascendente = 3, descendente = 5 (con punto auxiliar) *)
+
+(* ============ INICIALIZACION (solo al pasar de STOP a RUN) =========== *)
+IF M8002 THEN
+    ESTADO := 0;
+    PASO := 0;
+    PARAR := FALSE;
+    POS_ACT := 0;
+    ULT_DIR := 0;
+    CFG_DESC := FALSE;
+    CFG_P3 := FALSE;
+END_IF;
+
+(* ============ FLANCO DEL PULSADOR INICIO ============================= *)
+F_INICIO := P_INICIO AND NOT INI_ANT;
+INI_ANT := P_INICIO;
+
+(* ============ POSICION ACTUAL (ultimo punto detectado) ================ *)
+IF SEN_IZQ THEN
+    POS_ACT := 1;
+ELSIF SEN_CEN THEN
+    POS_ACT := 2;
+ELSIF SEN_DER THEN
+    POS_ACT := 3;
+END_IF;
+
+(* ============ SECUENCIA DE MOVIMIENTOS SEGUN SW1 / SW2 ================
+   FUENTE = punto donde estan las piezas, AUX = el otro extremo
+   Ascendente : 3 movimientos  FUENTE -> P2
+   Descendente: 5 movimientos  FUENTE -> AUX, FUENTE -> AUX, FUENTE -> P2,
+                               AUX -> P2, AUX -> P2                       *)
+IF CFG_P3 THEN
+    FUENTE := 3;
+    AUX := 1;
+ELSE
+    FUENTE := 1;
+    AUX := 3;
+END_IF;
+
+IF NOT CFG_DESC THEN
+    N_MOV := 3;
+    ORIGEN := FUENTE;
+    DESTINO := 2;
+ELSE
+    N_MOV := 5;
+    IF PASO <= 1 THEN
+        ORIGEN := FUENTE;
+        DESTINO := AUX;
+    ELSIF PASO = 2 THEN
+        ORIGEN := FUENTE;
+        DESTINO := 2;
+    ELSE
+        ORIGEN := AUX;
+        DESTINO := 2;
+    END_IF;
+END_IF;
+
+(* ============ PUNTO OBJETIVO Y DIRECCION =============================
+   Sin pieza (estados 0..5) va al ORIGEN; con pieza (6..10) al DESTINO
+   DIR: -1 = izquierda, 0 = ya esta en el punto, 1 = derecha             *)
+IF ESTADO >= 6 THEN
+    OBJ := DESTINO;
+ELSE
+    OBJ := ORIGEN;
+END_IF;
+
+EN_OBJ := (OBJ = 1 AND SEN_IZQ) OR (OBJ = 2 AND SEN_CEN) OR (OBJ = 3 AND SEN_DER);
+
+IF EN_OBJ THEN
+    DIR := 0;
+ELSIF OBJ > POS_ACT THEN
+    DIR := 1;
+ELSIF OBJ < POS_ACT THEN
+    DIR := -1;
+ELSIF ULT_DIR = 1 THEN
+    DIR := -1;                      (* se paso a la derecha del punto *)
+ELSE
+    DIR := 1;                       (* se paso a la izquierda del punto *)
+END_IF;
+
+(* ============ DETENER ================================================
+   Sin pieza (estados 1..4): se detiene de inmediato.
+   Con pieza (estados 5..10): termina de descargar en el destino y se detiene. *)
+IF DETENER THEN
+    IF ESTADO >= 1 AND ESTADO <= 4 THEN
+        ESTADO := 0;
+    ELSIF ESTADO >= 5 THEN
+        PARAR := TRUE;
+    END_IF;
+END_IF;
+
+(* ============ MAQUINA DE ESTADOS FINITOS ============================= *)
+CASE ESTADO OF
+
+  0: (* ESTADO 0: REPOSO - todo apagado *)
+     BAJAR := FALSE; SUBIR := FALSE; IMAN := FALSE; MOV_IZQ := FALSE; MOV_DER := FALSE;
+     IF F_INICIO THEN
+         IF PASO = 0 OR PASO >= N_MOV THEN
+             PASO := 0;                  (* ciclo nuevo: lee los suiches *)
+             CFG_DESC := SW1;
+             CFG_P3 := SW2;
+         END_IF;                         (* si no, reanuda el ciclo detenido *)
+         PARAR := FALSE;
+         ESTADO := 1;
+     END_IF;
+
+  1: (* ESTADO 1: SUBIR SIN PIEZA *)
+     BAJAR := FALSE; SUBIR := TRUE; IMAN := FALSE; MOV_IZQ := FALSE; MOV_DER := FALSE;
+     IF SEN_ARRIBA THEN
+         IF PASO >= N_MOV THEN
+             ESTADO := 0;                (* termino la secuencia *)
+         ELSIF DIR = -1 THEN
+             ESTADO := 2;
+         ELSIF DIR = 1 THEN
+             ESTADO := 3;
+         ELSE
+             ESTADO := 4;                (* ya esta sobre el origen *)
+         END_IF;
+     END_IF;
+
+  2: (* ESTADO 2: IR A LA IZQUIERDA HASTA EL ORIGEN *)
+     BAJAR := FALSE; SUBIR := FALSE; IMAN := FALSE; MOV_IZQ := TRUE; MOV_DER := FALSE;
+     IF EN_OBJ THEN
+         ESTADO := 4;
+     ELSIF DIR = 1 THEN
+         ESTADO := 3;                    (* el origen quedo a la derecha *)
+     END_IF;
+
+  3: (* ESTADO 3: IR A LA DERECHA HASTA EL ORIGEN *)
+     BAJAR := FALSE; SUBIR := FALSE; IMAN := FALSE; MOV_IZQ := FALSE; MOV_DER := TRUE;
+     IF EN_OBJ THEN
+         ESTADO := 4;
+     ELSIF DIR = -1 THEN
+         ESTADO := 2;                    (* el origen quedo a la izquierda *)
+     END_IF;
+
+  4: (* ESTADO 4: BAJAR A RECOGER LA PIEZA *)
+     BAJAR := TRUE; SUBIR := FALSE; IMAN := FALSE; MOV_IZQ := FALSE; MOV_DER := FALSE;
+     IF SEN_ABAJO THEN
+         ESTADO := 5;
+     END_IF;
+
+  5: (* ESTADO 5: ENERGIZAR EL ELECTROIMAN 0,5 s *)
+     BAJAR := FALSE; SUBIR := FALSE; IMAN := TRUE; MOV_IZQ := FALSE; MOV_DER := FALSE;
+     IF T_IMAN.Q THEN
+         ESTADO := 6;
+     END_IF;
+
+  6: (* ESTADO 6: SUBIR CON LA PIEZA *)
+     BAJAR := FALSE; SUBIR := TRUE; IMAN := TRUE; MOV_IZQ := FALSE; MOV_DER := FALSE;
+     IF SEN_ARRIBA THEN
+         IF DIR = -1 THEN
+             ESTADO := 7;
+         ELSIF DIR = 1 THEN
+             ESTADO := 8;
+         ELSE
+             ESTADO := 9;
+         END_IF;
+     END_IF;
+
+  7: (* ESTADO 7: IR A LA IZQUIERDA HASTA EL DESTINO *)
+     BAJAR := FALSE; SUBIR := FALSE; IMAN := TRUE; MOV_IZQ := TRUE; MOV_DER := FALSE;
+     IF EN_OBJ THEN
+         ESTADO := 9;
+     ELSIF DIR = 1 THEN
+         ESTADO := 8;
+     END_IF;
+
+  8: (* ESTADO 8: IR A LA DERECHA HASTA EL DESTINO *)
+     BAJAR := FALSE; SUBIR := FALSE; IMAN := TRUE; MOV_IZQ := FALSE; MOV_DER := TRUE;
+     IF EN_OBJ THEN
+         ESTADO := 9;
+     ELSIF DIR = -1 THEN
+         ESTADO := 7;
+     END_IF;
+
+  9: (* ESTADO 9: BAJAR CON LA PIEZA *)
+     BAJAR := TRUE; SUBIR := FALSE; IMAN := TRUE; MOV_IZQ := FALSE; MOV_DER := FALSE;
+     IF SEN_ABAJO THEN
+         ESTADO := 10;
+     END_IF;
+
+  10: (* ESTADO 10: SOLTAR LA PIEZA 0,5 s *)
+     BAJAR := FALSE; SUBIR := FALSE; IMAN := FALSE; MOV_IZQ := FALSE; MOV_DER := FALSE;
+     IF T_SOLTAR.Q THEN
+         PASO := PASO + 1;
+         IF PARAR THEN
+             PARAR := FALSE;
+             ESTADO := 0;                (* descargo la pieza y se detiene *)
+         ELSE
+             ESTADO := 1;
+         END_IF;
+     END_IF;
+
+END_CASE;
+
+(* ============ TEMPORIZADORES DEL ELECTROIMAN ========================= *)
+T_IMAN(IN := ESTADO = 5, PT := T#500ms);
+T_SOLTAR(IN := ESTADO = 10, PT := T#500ms);
+
+(* ============ ENCLAVAMIENTOS DE SEGURIDAD =============================
+   - Izquierda / derecha solo con el gancho arriba y sin pasar los extremos
+   - Subir y bajar nunca al mismo tiempo                               *)
+MOV_IZQ := MOV_IZQ AND SEN_ARRIBA AND NOT SEN_IZQ;
+MOV_DER := MOV_DER AND SEN_ARRIBA AND NOT SEN_DER;
+BAJAR := BAJAR AND NOT SUBIR;
+
+(* ============ ULTIMA DIRECCION DE MOVIMIENTO ========================= *)
+IF MOV_DER THEN
+    ULT_DIR := 1;
+ELSIF MOV_IZQ THEN
+    ULT_DIR := -1;
+END_IF;

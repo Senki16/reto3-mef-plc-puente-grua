@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reto 03 · MEF con PLC</title>
+<meta name="description" content="Simuladores del Reto 3 de Lenguajes Técnicos de Programación: puente grúa y parqueadero lineal controlados con una MEF en texto estructurado (PLC FX3G).">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%2307080f'/%3E%3Cpath d='M6 9h20M10 9v4M16 9v12M13 21h6' stroke='%2300e5ff' stroke-width='2.4' fill='none'/%3E%3Ccircle cx='16' cy='24' r='2' fill='%23ff2e88'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<div class="grid-bg" aria-hidden="true"></div>
+
+<header class="topbar">
+  <a class="brand" href="#top">
+    <span class="brand-mark" aria-hidden="true"></span>
+    <span class="brand-text">RETO<b>03</b></span>
+    <span class="brand-kr">제어 시스템</span>
+  </a>
+  <nav class="nav">
+    <a href="#sim">Simuladores</a>
+    <a href="#mef">MEF</a>
+    <a href="#codigo">Código</a>
+  </nav>
+  <span class="topbar-meta">FX3G · ST · 2026-2</span>
+</header>
+
+<main id="top">
+  <section class="hero">
+    <p class="eyebrow"><span class="dot"></span>Lenguajes Técnicos de Programación · EAFIT</p>
+    <h1>MEF con PLC<span class="hero-kr">상태 기계 시뮬레이터</span></h1>
+    <p class="lede">Dos plantas del laboratorio controladas con una máquina de estados finitos en texto estructurado.
+      Cada simulador ejecuta el mismo programa que se carga en el PLC Mitsubishi FX3G, traducido línea por línea y corriendo ciclo a ciclo contra un modelo de la planta.</p>
+    <ul class="chips">
+      <li><span>PLC</span>Mitsubishi FX3G</li>
+      <li><span>IDE</span>GX Works2 · ST</li>
+      <li><span>MEF</span>11 / 16 estados</li>
+      <li><span>Scan</span>10 ms</li>
+    </ul>
+  </section>
+
+  <aside class="notice" role="note">
+    <div class="notice-tag">공지 · AVISO</div>
+    <div class="notice-body">
+      <strong>El banco de pruebas del parqueadero lineal está dañado.</strong>
+      Por eso el reto se presenta con la opción del <b>puente grúa pequeño</b>. El parqueadero se diseñó y se probó primero, así que su simulador se conserva aquí como trabajo previo.
+    </div>
+  </aside>
+
+  <section id="sim" class="section">
+    <div class="section-head">
+      <span class="section-idx">01</span>
+      <h2>Simuladores <span class="kr">시뮬레이터</span></h2>
+    </div>
+
+    <div class="tabs" role="tablist">
+      <button class="tab is-active" role="tab" aria-selected="true" data-tab="grua">
+        <span class="tab-kr">크레인</span>Puente grúa<span class="badge ok">Opción presentada</span>
+      </button>
+      <button class="tab" role="tab" aria-selected="false" data-tab="parq">
+        <span class="tab-kr">주차장</span>Parqueadero lineal<span class="badge warn">Banco dañado</span>
+      </button>
+    </div>
+
+    <!-- ===================== PUENTE GRÚA ===================== -->
+    <div class="panel-wrap" data-panel="grua">
+      <p class="sim-brief">Pon <b>SW1</b> (orden) y <b>SW2</b> (punto de origen) y oprime <b>Armar pila</b> para colocar las piezas. Luego oprime <b>Inicio</b>. Las piezas deben quedar en P2 con la grande arriba y la pequeña abajo, en 3 movimientos si la pila es ascendente o en 5 si es descendente. Mantén <b>Detener</b> para probar el paro.</p>
+      <div class="sim">
+        <div class="viewport">
+          <div class="vp-head">
+            <span class="vp-title">PLANTA // 크레인</span>
+            <span class="vp-state" id="g-state-pill">E0 · Reposo</span>
+          </div>
+          <svg id="g-svg" viewBox="0 0 640 400" role="img" aria-label="Animación del puente grúa"></svg>
+          <div class="vp-foot">
+            <span>MOVIMIENTOS <b id="g-movs">0</b></span>
+            <span>PASO <b id="g-paso">0 / 3</b></span>
+            <span>ORIGEN → DESTINO <b id="g-od">P1 → P2</b></span>
+          </div>
+        </div>
+
+        <div class="controls">
+          <div class="ctl-group">
+            <div class="ctl-label">Configuración</div>
+            <div class="switch-row">
+              <label class="sw"><input type="checkbox" id="g-sw1"><span class="sw-ui"></span><span class="sw-txt"><span><b>SW1</b> · X20</span><small id="g-sw1-txt">Ascendente</small></span></label>
+              <label class="sw"><input type="checkbox" id="g-sw2"><span class="sw-ui"></span><span class="sw-txt"><span><b>SW2</b> · X23*</span><small id="g-sw2-txt">Piezas en P1</small></span></label>
+            </div>
+            <button class="btn ghost" id="g-armar">Armar pila según SW</button>
+          </div>
+          <div class="ctl-group">
+            <div class="ctl-label">Pulsadores</div>
+            <div class="btn-row">
+              <button class="btn go" id="g-inicio">Inicio<small>X21</small></button>
+              <button class="btn stop" id="g-detener">Detener<small>X22 · mantener</small></button>
+            </div>
+          </div>
+          <div class="ctl-group">
+            <div class="ctl-label">Simulación</div>
+            <div class="seg" id="g-speed" role="group" aria-label="Velocidad">
+              <button data-s="1" class="is-on">1×</button><button data-s="2">2×</button><button data-s="4">4×</button>
+            </div>
+            <button class="btn ghost" id="g-reset">STOP → RUN (reiniciar PLC)</button>
+          </div>
+          <div class="ctl-group">
+            <div class="ctl-label">Variables (Watch)</div>
+            <dl class="watch" id="g-watch"></dl>
+          </div>
+        </div>
+      </div>
+
+      <div class="sim-bottom">
+        <div class="card">
+          <div class="card-head">Estado de la MEF <span class="kr">상태</span></div>
+          <ol class="states" id="g-states"></ol>
+        </div>
+        <div class="card">
+          <div class="card-head">Entradas / salidas <span class="kr">입출력</span></div>
+          <div class="io" id="g-io"></div>
+        </div>
+        <div class="card log-card">
+          <div class="card-head">Bitácora <span class="kr">로그</span><button class="mini" data-clear="g-log">limpiar</button></div>
+          <ol class="log" id="g-log"></ol>
+        </div>
+      </div>
+      <p class="footnote">* El enunciado no asigna entrada a SW2; en el programa se usa X23 y se debe confirmar en el banco.</p>
+    </div>
+
+    <!-- ===================== PARQUEADERO ===================== -->
+    <div class="panel-wrap" data-panel="parq" hidden>
+      <p class="sim-brief">Con <b>Entrar</b> se coloca un carro en la entrada y el elevador lo lleva al puesto libre más cercano; con <b>Sacar</b> se retira el carro ocupado más cercano. Si no hay cupo o no hay carros, la alarma parpadea 3 veces. <b>Forzar lleno</b> simula poner OCUPADO[0..7] en 1 desde el Watch.</p>
+      <div class="sim">
+        <div class="viewport">
+          <div class="vp-head">
+            <span class="vp-title">PLANTA // 주차 타워</span>
+            <span class="vp-state" id="p-state-pill">E0 · Reposo</span>
+          </div>
+          <svg id="p-svg" viewBox="0 0 640 520" role="img" aria-label="Animación del parqueadero lineal"></svg>
+          <div class="vp-foot">
+            <span>CARROS <b id="p-num">0 / 8</b></span>
+            <span>DESTINO <b id="p-dest">–</b></span>
+            <span>ALARMA <b id="p-alarm">OFF</b></span>
+          </div>
+        </div>
+
+        <div class="controls">
+          <div class="ctl-group">
+            <div class="ctl-label">Pulsadores</div>
+            <div class="btn-row three">
+              <button class="btn go" id="p-entrar">Entrar<small>X20</small></button>
+              <button class="btn alt" id="p-sacar">Sacar<small>X21</small></button>
+              <button class="btn stop" id="p-detener">Detener<small>X22</small></button>
+            </div>
+          </div>
+          <div class="ctl-group">
+            <div class="ctl-label">Watch</div>
+            <div class="bits" id="p-bits"></div>
+            <div class="btn-row">
+              <button class="btn ghost" id="p-lleno">Forzar lleno</button>
+              <button class="btn ghost" id="p-sync">Igualar a la planta</button>
+            </div>
+          </div>
+          <div class="ctl-group">
+            <div class="ctl-label">Simulación</div>
+            <div class="seg" id="p-speed" role="group" aria-label="Velocidad">
+              <button data-s="1" class="is-on">1×</button><button data-s="2">2×</button><button data-s="4">4×</button>
+            </div>
+            <button class="btn ghost" id="p-reset">STOP → RUN (reiniciar todo)</button>
+          </div>
+          <div class="ctl-group">
+            <div class="ctl-label">Variables (Watch)</div>
+            <dl class="watch" id="p-watch"></dl>
+          </div>
+        </div>
+      </div>
+
+      <div class="sim-bottom">
+        <div class="card">
+          <div class="card-head">Estado de la MEF <span class="kr">상태</span></div>
+          <ol class="states" id="p-states"></ol>
+        </div>
+        <div class="card">
+          <div class="card-head">Entradas / salidas <span class="kr">입출력</span></div>
+          <div class="io" id="p-io"></div>
+        </div>
+        <div class="card log-card">
+          <div class="card-head">Bitácora <span class="kr">로그</span><button class="mini" data-clear="p-log">limpiar</button></div>
+          <ol class="log" id="p-log"></ol>
+        </div>
+      </div>
+      <p class="footnote">Pulsadores y alarma (X20–X22, Y6) asignados por el grupo; el enunciado del parqueadero no los define.</p>
+    </div>
+  </section>
+
+  <section id="mef" class="section">
+    <div class="section-head">
+      <span class="section-idx">02</span>
+      <h2>Máquina de estados <span class="kr">상태 기계</span></h2>
+    </div>
+    <div class="mef-grid">
+      <figure class="card fig" data-show="grua">
+        <img src="assets/MEF_PuenteGrua.png" alt="Diagrama de la máquina de estados del puente grúa" loading="lazy">
+        <figcaption>Puente grúa. Los estados en amarillo llevan la pieza. Con Detener en los estados 1 a 4 para de inmediato; en los estados 5 a 10 termina de soltar la pieza y se detiene.</figcaption>
+      </figure>
+      <figure class="card fig" data-show="parq" hidden>
+        <img src="assets/MEF_Parqueadero.png" alt="Diagrama de la máquina de estados del parqueadero" loading="lazy">
+        <figcaption>Parqueadero lineal. El vector OCUPADO se actualiza al llegar MEC_AFUERA (estado 4).</figcaption>
+      </figure>
+      <div class="card strategy" data-show="grua">
+        <div class="card-head">Mínimo de movimientos <span class="kr">최소 이동</span></div>
+        <p>El electroimán toma solo la pieza de encima, así que cada traslado invierte el orden de la pila.</p>
+        <table class="mini-table">
+          <thead><tr><th>SW1 SW2</th><th>Caso</th><th>Secuencia</th><th>Mov.</th></tr></thead>
+          <tbody>
+            <tr><td>0 0</td><td>Asc. en P1</td><td>P1→P2 ×3</td><td>3</td></tr>
+            <tr><td>0 1</td><td>Asc. en P3</td><td>P3→P2 ×3</td><td>3</td></tr>
+            <tr><td>1 0</td><td>Desc. en P1</td><td>P1→P3 ×2, P1→P2, P3→P2 ×2</td><td>5</td></tr>
+            <tr><td>1 1</td><td>Desc. en P3</td><td>P3→P1 ×2, P3→P2, P1→P2 ×2</td><td>5</td></tr>
+          </tbody>
+        </table>
+        <p class="muted">La pila se lee desde arriba: ascendente = pequeña arriba. En P2 debe quedar grande arriba, mediana y pequeña abajo.</p>
+      </div>
+      <div class="card strategy" data-show="parq" hidden>
+        <div class="card-head">Vector de puestos <span class="kr">주차 벡터</span></div>
+        <p>Los 8 puestos se numeran por cercanía a la entrada. El piso y el lado salen de dos operaciones enteras:</p>
+        <pre class="formula">PISO = POS / 2 + 1
+LADO = POS MOD 2</pre>
+        <p class="muted">El primer 0 del vector es el puesto libre más cercano, y el primer 1 es el ocupado más cercano.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="codigo" class="section">
+    <div class="section-head">
+      <span class="section-idx">03</span>
+      <h2>Código ST <span class="kr">코드</span></h2>
+    </div>
+    <div class="card code-card">
+      <div class="code-head">
+        <span class="file" id="code-file">Reto3_PuenteGrua_Codigo_ST.txt</span>
+        <div class="code-actions">
+          <button class="mini" id="code-copy">copiar</button>
+          <a class="mini" id="code-dl" href="assets/Reto3_PuenteGrua_Codigo_ST.txt" download>descargar</a>
+        </div>
+      </div>
+      <pre class="code"><code id="code-body">Cargando…</code></pre>
+    </div>
+  </section>
+</main>
+
+<footer class="footer">
+  <span>Reto 03 · MEF con PLC · Lenguajes Técnicos de Programación · Universidad EAFIT</span>
+  <span class="kr">제작 2026</span>
+</footer>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,226 @@
+(* RETO #3 - MEF CON PLC - PARQUEADERO LINEAL
+   PLC Mitsubishi FX3G - GX Works2 (Structured Project) - POU en ST
+   Estados: 0 Reposo, 1 Subir, 2 Izquierda, 3 Derecha, 4 Abrir mec,
+   5 Cerrar mec, 6 Volver der, 7 Volver izq, 8 Bajar, 9 Alarma ON, 10 Alarma OFF
+   Puestos OCUPADO[0..7]: 0=P1 izq, 1=P1 der, 2=P2 izq ... 7=P4 der
+   (PISO = POS/2 + 1, LADO = POS MOD 2)
+   Version 2: el vector OCUPADO se actualiza al llegar MEC_AFUERA (estado 4)
+   para que DETENER a mitad de ciclo no desfase el conteo de carros. *)
+
+(* ============ INICIALIZACION (solo al pasar de STOP a RUN) =========== *)
+IF M8002 THEN
+    ESTADO := 0;
+    OPER := 0;
+    CONT := 0;
+    LADO_OBJ := 0;
+    OCUPADO[0] := FALSE;
+    OCUPADO[1] := FALSE;
+    OCUPADO[2] := FALSE;
+    OCUPADO[3] := FALSE;
+    OCUPADO[4] := FALSE;
+    OCUPADO[5] := FALSE;
+    OCUPADO[6] := FALSE;
+    OCUPADO[7] := FALSE;
+END_IF;
+
+(* ============ FLANCOS DE LOS PULSADORES ============================== *)
+F_ENTRAR := P_ENTRAR AND NOT ENT_ANT;
+F_SACAR  := P_SACAR  AND NOT SAC_ANT;
+ENT_ANT  := P_ENTRAR;
+SAC_ANT  := P_SACAR;
+
+(* ============ POSICION ACTUAL ======================================== *)
+EN_PISO := PISO1 OR PISO2 OR PISO3 OR PISO4;
+EN_CASA := PISO1 AND SEN_CEN AND MEC_ADENTRO;
+LLEGO_PISO := (PISO_OBJ = 1 AND PISO1) OR (PISO_OBJ = 2 AND PISO2)
+           OR (PISO_OBJ = 3 AND PISO3) OR (PISO_OBJ = 4 AND PISO4);
+
+(* ============ PUESTO LIBRE MAS CERCANO =============================== *)
+IF NOT OCUPADO[0] THEN POS_LIBRE := 0;
+ELSIF NOT OCUPADO[1] THEN POS_LIBRE := 1;
+ELSIF NOT OCUPADO[2] THEN POS_LIBRE := 2;
+ELSIF NOT OCUPADO[3] THEN POS_LIBRE := 3;
+ELSIF NOT OCUPADO[4] THEN POS_LIBRE := 4;
+ELSIF NOT OCUPADO[5] THEN POS_LIBRE := 5;
+ELSIF NOT OCUPADO[6] THEN POS_LIBRE := 6;
+ELSIF NOT OCUPADO[7] THEN POS_LIBRE := 7;
+ELSE POS_LIBRE := -1;
+END_IF;
+
+(* ============ PUESTO OCUPADO MAS CERCANO ============================= *)
+IF OCUPADO[0] THEN POS_OCUPADA := 0;
+ELSIF OCUPADO[1] THEN POS_OCUPADA := 1;
+ELSIF OCUPADO[2] THEN POS_OCUPADA := 2;
+ELSIF OCUPADO[3] THEN POS_OCUPADA := 3;
+ELSIF OCUPADO[4] THEN POS_OCUPADA := 4;
+ELSIF OCUPADO[5] THEN POS_OCUPADA := 5;
+ELSIF OCUPADO[6] THEN POS_OCUPADA := 6;
+ELSIF OCUPADO[7] THEN POS_OCUPADA := 7;
+ELSE POS_OCUPADA := -1;
+END_IF;
+
+LLENO := POS_LIBRE < 0;
+VACIO := POS_OCUPADA < 0;
+
+(* ============ DETENER: en cualquier estado vuelve al estado 0 ========= *)
+IF DETENER THEN
+    ESTADO := 0;
+END_IF;
+
+(* ============ MAQUINA DE ESTADOS FINITOS ============================= *)
+CASE ESTADO OF
+
+  0: (* ESTADO 0: REPOSO - todo apagado *)
+     MOV_DER := FALSE; MOV_IZQ := FALSE; SUBIR := FALSE; BAJAR := FALSE;
+     ABRIR_MEC := FALSE; CERRAR_MEC := FALSE; ALARMA := FALSE;
+
+     IF (F_ENTRAR OR F_SACAR) AND NOT EN_CASA THEN
+         OPER := 0;                      (* si no esta en casa, primero lo lleva a casa *)
+         ESTADO := 5;
+     ELSIF F_ENTRAR AND LLENO THEN       (* no hay cupo -> alarma *)
+         CONT := 0;
+         ESTADO := 9;
+     ELSIF F_SACAR AND VACIO THEN        (* no hay carros -> alarma *)
+         CONT := 0;
+         ESTADO := 9;
+     ELSIF F_ENTRAR THEN                 (* entrar: puesto libre mas cercano *)
+         OPER := 1;
+         POS := POS_LIBRE;
+         PISO_OBJ := POS / 2 + 1;
+         LADO_OBJ := POS MOD 2;
+         ESTADO := 1;
+     ELSIF F_SACAR THEN                  (* sacar: puesto ocupado mas cercano *)
+         OPER := 2;
+         POS := POS_OCUPADA;
+         PISO_OBJ := POS / 2 + 1;
+         LADO_OBJ := POS MOD 2;
+         ESTADO := 1;
+     END_IF;
+
+  1: (* ESTADO 1: SUBIR AL PISO DESTINO (en el centro) *)
+     MOV_DER := FALSE; MOV_IZQ := FALSE; SUBIR := TRUE; BAJAR := FALSE;
+     ABRIR_MEC := FALSE; CERRAR_MEC := FALSE; ALARMA := FALSE;
+     IF LLEGO_PISO AND LADO_OBJ = 0 THEN
+         ESTADO := 2;
+     ELSIF LLEGO_PISO AND LADO_OBJ = 1 THEN
+         ESTADO := 3;
+     END_IF;
+
+  2: (* ESTADO 2: MOVER A LA IZQUIERDA HASTA EL PUESTO *)
+     MOV_DER := FALSE; MOV_IZQ := TRUE; SUBIR := FALSE; BAJAR := FALSE;
+     ABRIR_MEC := FALSE; CERRAR_MEC := FALSE; ALARMA := FALSE;
+     IF SEN_IZQ THEN
+         ESTADO := 4;
+     END_IF;
+
+  3: (* ESTADO 3: MOVER A LA DERECHA HASTA EL PUESTO *)
+     MOV_DER := TRUE; MOV_IZQ := FALSE; SUBIR := FALSE; BAJAR := FALSE;
+     ABRIR_MEC := FALSE; CERRAR_MEC := FALSE; ALARMA := FALSE;
+     IF SEN_DER THEN
+         ESTADO := 4;
+     END_IF;
+
+  4: (* ESTADO 4: ABRIR MECANISMO (sale el mecanismo) *)
+     MOV_DER := FALSE; MOV_IZQ := FALSE; SUBIR := FALSE; BAJAR := FALSE;
+     ABRIR_MEC := TRUE; CERRAR_MEC := FALSE; ALARMA := FALSE;
+     IF MEC_AFUERA THEN
+         (* actualiza el vector de puestos apenas el mecanismo llega afuera:
+            entrar = el carro ya quedo en el puesto -> ocupado
+            sacar  = el mecanismo ya tomo el carro  -> libre
+            Asi, si se oprime DETENER despues de este punto, el vector
+            queda correcto aunque el ciclo no termine. *)
+         IF OPER = 1 OR OPER = 2 THEN
+             CASE POS OF
+                 0: OCUPADO[0] := OPER = 1;
+                 1: OCUPADO[1] := OPER = 1;
+                 2: OCUPADO[2] := OPER = 1;
+                 3: OCUPADO[3] := OPER = 1;
+                 4: OCUPADO[4] := OPER = 1;
+                 5: OCUPADO[5] := OPER = 1;
+                 6: OCUPADO[6] := OPER = 1;
+                 7: OCUPADO[7] := OPER = 1;
+             END_CASE;
+             OPER := 0;
+         END_IF;
+         ESTADO := 5;
+     END_IF;
+
+  5: (* ESTADO 5: CERRAR MECANISMO (entra el mecanismo) *)
+     MOV_DER := FALSE; MOV_IZQ := FALSE; SUBIR := FALSE; BAJAR := FALSE;
+     ABRIR_MEC := FALSE; CERRAR_MEC := TRUE; ALARMA := FALSE;
+     IF MEC_ADENTRO THEN
+         IF SEN_CEN THEN
+             ESTADO := 8;                (* ya esta en el centro: bajar *)
+         ELSIF SEN_IZQ THEN
+             ESTADO := 6;                (* esta a la izquierda: volver a la derecha *)
+         ELSIF SEN_DER THEN
+             ESTADO := 7;                (* esta a la derecha: volver a la izquierda *)
+         ELSIF LADO_OBJ = 0 THEN
+             ESTADO := 6;                (* quedo entre izquierda y centro *)
+         ELSE
+             ESTADO := 7;                (* quedo entre centro y derecha *)
+         END_IF;
+     END_IF;
+
+  6: (* ESTADO 6: VOLVER AL CENTRO MOVIENDO A LA DERECHA *)
+     MOV_DER := TRUE; MOV_IZQ := FALSE; SUBIR := FALSE; BAJAR := FALSE;
+     ABRIR_MEC := FALSE; CERRAR_MEC := FALSE; ALARMA := FALSE;
+     IF SEN_CEN THEN
+         ESTADO := 8;
+     END_IF;
+
+  7: (* ESTADO 7: VOLVER AL CENTRO MOVIENDO A LA IZQUIERDA *)
+     MOV_DER := FALSE; MOV_IZQ := TRUE; SUBIR := FALSE; BAJAR := FALSE;
+     ABRIR_MEC := FALSE; CERRAR_MEC := FALSE; ALARMA := FALSE;
+     IF SEN_CEN THEN
+         ESTADO := 8;
+     END_IF;
+
+  8: (* ESTADO 8: BAJAR AL PISO 1 (casa / entrada) *)
+     MOV_DER := FALSE; MOV_IZQ := FALSE; SUBIR := FALSE; BAJAR := TRUE;
+     ABRIR_MEC := FALSE; CERRAR_MEC := FALSE; ALARMA := FALSE;
+     IF PISO1 THEN
+         ESTADO := 0;
+     END_IF;
+
+  9: (* ESTADO 9: ALARMA ENCENDIDA 0,5 s *)
+     MOV_DER := FALSE; MOV_IZQ := FALSE; SUBIR := FALSE; BAJAR := FALSE;
+     ABRIR_MEC := FALSE; CERRAR_MEC := FALSE; ALARMA := TRUE;
+     IF TEMP_ON.Q THEN
+         CONT := CONT + 1;
+         ESTADO := 10;
+     END_IF;
+
+  10: (* ESTADO 10: ALARMA APAGADA 0,5 s *)
+     MOV_DER := FALSE; MOV_IZQ := FALSE; SUBIR := FALSE; BAJAR := FALSE;
+     ABRIR_MEC := FALSE; CERRAR_MEC := FALSE; ALARMA := FALSE;
+     IF TEMP_OFF.Q AND CONT < 3 THEN
+         ESTADO := 9;
+     ELSIF TEMP_OFF.Q AND CONT >= 3 THEN
+         ESTADO := 0;
+     END_IF;
+
+END_CASE;
+
+(* ============ TEMPORIZADORES DE LA ALARMA ============================ *)
+TEMP_ON(IN := ESTADO = 9, PT := T#500ms);
+TEMP_OFF(IN := ESTADO = 10, PT := T#500ms);
+
+(* ============ ENCLAVAMIENTOS DE SEGURIDAD (notas del reto) ============
+   - Subir / bajar solo cuando esta en el sensor de centro (S2)
+   - Izquierda / derecha solo cuando esta en algun sensor de piso      *)
+SUBIR   := SUBIR   AND SEN_CEN;
+BAJAR   := BAJAR   AND SEN_CEN;
+MOV_DER := MOV_DER AND EN_PISO;
+MOV_IZQ := MOV_IZQ AND EN_PISO;
+
+(* ============ CONTADOR DE CARROS (para monitorear) ==================== *)
+NUM_CARROS := 0;
+IF OCUPADO[0] THEN NUM_CARROS := NUM_CARROS + 1; END_IF;
+IF OCUPADO[1] THEN NUM_CARROS := NUM_CARROS + 1; END_IF;
+IF OCUPADO[2] THEN NUM_CARROS := NUM_CARROS + 1; END_IF;
+IF OCUPADO[3] THEN NUM_CARROS := NUM_CARROS + 1; END_IF;
+IF OCUPADO[4] THEN NUM_CARROS := NUM_CARROS + 1; END_IF;
+IF OCUPADO[5] THEN NUM_CARROS := NUM_CARROS + 1; END_IF;
+IF OCUPADO[6] THEN NUM_CARROS := NUM_CARROS + 1; END_IF;
+IF OCUPADO[7] THEN NUM_CARROS := NUM_CARROS + 1; END_IF;
